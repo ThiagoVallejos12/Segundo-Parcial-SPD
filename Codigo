@@ -1,0 +1,166 @@
+// C++ code
+//
+#include <Servo.h>
+#include <LiquidCrystal.h>
+#include <IRremote.h>
+
+#define LEDROJO 12
+#define LEDVERDE 13
+#define RS 2
+#define E 3
+#define D4 4
+#define D5 5 
+#define D6 6
+#define D7 7
+#define TERMOMETRO A0
+#define SERVO 9
+#define CONTROL 11
+
+#define BotonPower 0xFF00BF00
+#define BotonOn 0xEF10BF00
+#define BotonOff 0xEE11BF00
+
+bool detectarBoton(IRrecv detector, uint32_t boton);
+void sistemaIncendio(int estado, int led1, int led2, Servo servo, int temperatura);
+int verificarEstacion(int temperatura, LiquidCrystal lcd);
+
+int lecturaTemperatura = 0;
+bool estadoSistema = false;
+
+LiquidCrystal miLcd(RS, E, D4, D5, D6, D7);
+IRrecv detectorIR(CONTROL);
+Servo miServo;
+
+void setup()
+{
+  pinMode(LEDROJO, OUTPUT);
+  pinMode(LEDVERDE, OUTPUT);
+  Serial.begin(9600);
+  miLcd.begin(16,2);
+  detectorIR.begin(CONTROL, DISABLE_LED_FEEDBACK);
+  miServo.attach(SERVO);
+  
+}
+
+void loop()
+{
+  while (estadoSistema)
+  {
+    lecturaTemperatura = map(analogRead(A0),20,358,-40,125);
+    miLcd.setCursor(0,0);
+    miLcd.print("TEMPERATURA:");
+    miLcd.print(lecturaTemperatura);
+    miLcd.print("C ");
+    verificarEstacion(lecturaTemperatura, miLcd);
+    if (lecturaTemperatura >= 60)
+    {
+      sistemaIncendio(1, LEDROJO, LEDVERDE, miServo, lecturaTemperatura);
+    }
+    else
+    {
+      sistemaIncendio(0, LEDROJO, LEDVERDE, miServo, lecturaTemperatura);
+    }
+    
+    estadoSistema = !detectarBoton(detectorIR, BotonPower);
+  }
+  miLcd.clear();
+  estadoSistema = detectarBoton(detectorIR, BotonPower);
+  sistemaIncendio(2, LEDROJO, LEDVERDE, miServo, lecturaTemperatura);
+}
+
+int verificarEstacion(int temperatura, LiquidCrystal lcd)
+{
+  if (temperatura < 60)
+  {
+     if (temperatura < 10)
+    {
+      lcd.setCursor(0,1);
+      lcd.print("INVIERNO        ");
+    }
+    else if(temperatura < 15)
+    {
+      lcd.setCursor(0,1);
+      lcd.print("OTONO           ");
+    }
+    else if(temperatura < 20)
+    {
+      lcd.setCursor(0,1);
+      lcd.print("PRIMAVERA       ");
+    }
+    else
+    {
+      lcd.setCursor(0,1);
+      lcd.print("VERANO          ");
+    } 
+  }
+}
+
+bool detectarBoton(IRrecv detector, uint32_t boton)
+{
+  int retorno = false;
+  if (detector.decode())
+  {
+    if (detector.decodedIRData.decodedRawData == boton)
+    {
+      retorno = true;
+      delay(100);
+    }
+    detector.resume();
+  }
+  return retorno;
+}
+
+void sistemaIncendio(int estado, int led1, int led2, Servo servo, int temperatura)
+{
+  digitalWrite(led2, LOW);
+  digitalWrite(led1, LOW);
+  switch (estado)
+  {
+    case 0:
+    	servo.write(0);
+    	if (temperatura < 40)
+        {
+          digitalWrite(led2, HIGH);
+        }
+    	else if (temperatura < 50)
+        {
+          digitalWrite(led2, HIGH);
+    	  digitalWrite(led1, LOW);
+          delay(250);
+          digitalWrite(led2, LOW);
+    	  digitalWrite(led1, HIGH);
+          delay(250);
+        }
+    	else if (temperatura < 55)
+        {
+          digitalWrite(led2, HIGH);
+    	  digitalWrite(led1, LOW);
+          delay(175);
+          digitalWrite(led2, LOW);
+    	  digitalWrite(led1, HIGH);
+          delay(175);
+        }
+    	else if (temperatura < 60)
+        {
+          digitalWrite(led2, HIGH);
+    	  digitalWrite(led1, LOW);
+          delay(100);
+          digitalWrite(led2, LOW);
+    	  digitalWrite(led1, HIGH);
+          delay(100);
+        }
+  	break;
+    case 1:
+    	servo.write(90);
+        miLcd.setCursor(0,1);
+        miLcd.print("ALERTA: INCENDIO!");
+    	digitalWrite(led1, HIGH);
+    	delay(100);
+    	digitalWrite(led1, LOW);
+    	delay(100);
+    break;
+    case 2:
+    	servo.write(0);
+    break;
+  }
+}
