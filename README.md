@@ -244,4 +244,4 @@ void sistemaIncendio(int estado, int led1, int led2, Servo servo, int temperatur
 ```
 
 ## Proyecto en tinkercad
-[Primer parcial](https://www.tinkercad.com/things/k8Xg7A7mKyn)
+[Segundo parcial](https://www.tinkercad.com/things/k8Xg7A7mKyn)
