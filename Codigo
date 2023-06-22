@@ -22,7 +22,7 @@
 
 bool detectarBoton(IRrecv detector, uint32_t boton);
 void sistemaIncendio(int estado, int led1, int led2, Servo servo, int temperatura);
-int verificarEstacion(int temperatura, LiquidCrystal lcd);
+void verificarEstacion(int temperatura, LiquidCrystal lcd);
 
 int lecturaTemperatura = 0;
 bool estadoSistema = false;
@@ -39,11 +39,13 @@ void setup()
   miLcd.begin(16,2);
   detectorIR.begin(CONTROL, DISABLE_LED_FEEDBACK);
   miServo.attach(SERVO);
-  
 }
 
 void loop()
 {
+  miLcd.clear();
+  estadoSistema = detectarBoton(detectorIR, BotonPower);
+  sistemaIncendio(2, LEDROJO, LEDVERDE, miServo, lecturaTemperatura);
   while (estadoSistema)
   {
     lecturaTemperatura = map(analogRead(A0),20,358,-40,125);
@@ -63,12 +65,9 @@ void loop()
     
     estadoSistema = !detectarBoton(detectorIR, BotonPower);
   }
-  miLcd.clear();
-  estadoSistema = detectarBoton(detectorIR, BotonPower);
-  sistemaIncendio(2, LEDROJO, LEDVERDE, miServo, lecturaTemperatura);
 }
 
-int verificarEstacion(int temperatura, LiquidCrystal lcd)
+void verificarEstacion(int temperatura, LiquidCrystal lcd)
 {
   if (temperatura < 60)
   {
